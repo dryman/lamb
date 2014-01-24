@@ -1,0 +1,65 @@
+Lamb -- clojure hadoop library
+==============================
+
+Experimental clojure hadoop library.
+
+SYNOPSIS
+--------
+
+```clj
+(ns lamb.example
+  (:import
+   [org.apache.hadoop.mapreduce Mapper Reducer Job]
+   [org.apache.hadoop.fs Path]
+   [org.apache.hadoop.util Tool ToolRunner]
+   [org.apache.hadoop.conf Configuration Configured]
+   [org.apache.hadoop.mapreduce.lib.reduce IntSumReducer LongSumReducer]
+   [org.apache.hadoop.mapreduce.lib.output FileOutputFormat]
+   [org.apache.hadoop.mapreduce.lib.input MultipleInputs TextInputFormat])
+  (:use lamb.imports
+        lamb.core)
+  (:gen-class
+   :extends org.apache.hadoop.conf.Configured
+   :implements [org.apache.hadoop.util.Tool]
+   :init init
+   :state state))
+
+(defmapper Map [key val context]
+  (let [[ip timestamp ua] (clojure.string/split val #"\t")]
+    (.write context
+            (Text. (str ip "\t" ua))
+            (IntWritable. (int 1)))))
+
+(defn -main [& argv]
+  (ToolRunner/run (Configuration.) (lamb.example.) (into-array String argv)))
+
+(defn -run [this args]
+  (let [job (doto (Job. (.getConf this))
+              (.setJobName "Hadoop lamb test")
+              (.setJarByClass lamb.core)
+              (.setMapOutputKeyClass IntWritable)
+              (.setMapOutputValueClass IntWritable)
+              (.setReducerClass IntSumReducer)
+              (.setNumReduceTasks 1))
+        [src dst] args]
+    (MultipleInputs/addInputPath job (Path. src) TextInputFormat lamb.example.Map)
+    (FileOutputFormat/setOutputPath job (Path. dst))
+    (.submit job)
+    (.waitForCompletion job true)
+    0))
+```
+
+TODOs
+-----
+
+1. Create two interfaces for mapper and reducer class generation. One is for simple use, another is more powerful
+
+2. The job interface needs to be reduced, also we don't want to create complicated namespace per file.
+
+License
+-------
+
+Copyright © 2014 Felix Chern
+
+Distributed under the Eclipse Public License either version 1.0 or (at
+your option) any later version.
