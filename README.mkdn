@@ -30,6 +30,8 @@ SYNOPSIS
             (Text. (str ip "\t" ua))
             (IntWritable. (int 1)))))
 
+(defn -init [] [[] {}])
+
 (defn -main [& argv]
   (ToolRunner/run (Configuration.) (lamb.example.) (into-array String argv)))
 
